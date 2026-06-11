@@ -1,0 +1,19 @@
+# Gradle / Android
+.gradle/
+.kotlin/
+build/
+local.properties
+*.apk
+
+# IDE
+.idea/
+*.iml
+
+# 大文件：模型与 AAR 不入库（获取方式见 AGENT.md）
+models/
+app/libs/*.aar
+app/src/main/assets/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/
+app/src/main/assets/punct-ct-transformer-zh-en/
+
+# 杂项
+screenshot.png
