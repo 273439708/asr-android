@@ -1,27 +1,27 @@
-# AGENT.md — AsrDemo Project Specification
+# AGENT.md — AsrDemo Project Specification (Qwen-Only)
 
-> Android on-device bilingual (Chinese/English) real-time ASR Demo (sherpa-onnx + Zipformer + Jetpack Compose).
+> Android on-device bilingual (Chinese/English) real-time ASR Demo.
+> Powered by **Qwen3-ASR-0.6B** (Offline/LLM-based).
 > This document is for AI Agents / developers to quickly understand the project.
 > For the overall project roadmap, see `PLAN.md`.
 
 ## Project Overview
 
-- **Goal**: Real-time on-device streaming ASR on high-performance Android devices (e.g., Snapdragon 888, arm64-v8a).
+- **Goal**: High-precision on-device ASR on high-performance Android devices (e.g., Snapdragon 888).
 - **Package**: `com.example.asrdemo`
-- **Inference**: CPU int8 (Optimized for mobile CPU inference).
+- **Inference**: 
+    - **Qwen3-ASR-0.6B**: High precision, CPU int8 (级联推理), requires ~1.2GB RAM.
 
 ## Tech Stack (Versions are pinned)
 
-| Component | Version | Description |
-|---|---|---|
-| Gradle | 9.4.1 | |
-| AGP | 9.2.1 | Built-in Kotlin, do not apply `kotlin-android` plugin separately |
-| Kotlin | 2.2.10 | `kotlin-compose` plugin |
-| Compose BOM | 2026.02.01 | |
-| JDK | JBR 21 | Recommended for consistency |
-| sherpa-onnx | v1.13.2 | Official AAR in `app/libs/` |
-| compileSdk | 36.1 | |
-| minSdk / targetSdk | 24 / 36 | |
+ Component | Version | Description |
+---|---|---|
+ Gradle | 9.4.1 | |
+ AGP | 9.2.1 | |
+ Kotlin | 2.2.10 | |
+ Compose BOM | 2026.02.01 | |
+ onnxruntime-android | 1.20.0 | Official ONNX Runtime for Android |
+ compileSdk | 36.1 | |
 
 ## Commands (Build & Deploy)
 
@@ -38,62 +38,47 @@ adb shell am start -n com.example.asrdemo/.MainActivity
 
 ```
 app/src/main/java/com/example/asrdemo/
-├── MainActivity.kt        # Compose UI + AudioRecord + Main Loop
-├── SherpaAsrEngine.kt     # sherpa-onnx Wrapper: OnlineRecognizer + OfflinePunctuation
-└── TextPostProcessor.kt   # Text processing: Casing, Spacing, Punctuation conversion
+├── MainActivity.kt         # Compose UI + AudioRecord Controller
+├── QwenAsrEngine.kt        # Custom Qwen3-ASR Engine (5-model cascade + KV Cache)
+├── MelFeatureExtractor.kt   # 128-bin Mel spectrogram implementation for Qwen3
+└── TextPostProcessor.kt    # Casing, Spacing, and Punctuation polishing
 ```
 
 ### Data Flow
 
+#### Qwen3-ASR (Offline / Full Sentence)
 ```
-AudioRecord (16kHz mono PCM16)
-  → ShortArray → FloatArray
-  → SherpaAsrEngine.feed() → (text, isEndpoint)
-  → TextPostProcessor.process()
-  → [Final only] addPunctuation() → polishPunctuation()
-  → UI Update
+AudioRecord -> Accumulate Audio -> transcribe() 
+  -> MelFeatureExtractor (128-bin)
+  -> runFrontend (Conv) -> runTransformer (Encoder)
+  -> runDecodeLoop (LLM Decoder + KV Cache loop) -> UI Update
 ```
 
-### Key Design
+### Key Design & Fixes
 
-- Async model loading.
-- Endpoint rules: 1.0s silence for sentence breaking.
-- Punctuation recovery is only applied to final results (to save CPU/RTF).
-- Real-time RTF tracking.
-- `FLAG_KEEP_SCREEN_ON` during recognition.
+- **Memory Optimization**: Models are loaded via file paths (mmap) to avoid JVM Heap OOM.
+- **Large Memory Support**: `android:largeHeap="true"` enabled for 0.6B model support.
+- **Bilingual Support**: Native support for Chinese and English via Qwen3 tokenizer.
 
 ## Model Files
 
-Models are excluded from Git. Fetch them via:
+Models are excluded from Git. 
 
-```bash
-# 1) sherpa-onnx AAR -> app/libs/
-curl -L -o app/libs/sherpa-onnx-1.13.2.aar \
-  https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-1.13.2.aar
-
-# 2) ASR Model (Mobile version) -> assets
-# Download sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20-mobile.tar.bz2
-# Extract: encoder-epoch-99-avg-1.int8.onnx, decoder-epoch-99-avg-1.onnx, joiner-epoch-99-avg-1.int8.onnx, tokens.txt
-# Place in: app/src/main/assets/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/
-
-# 3) Punctuation Model -> assets
-# Download sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2
-# Extract: model.int8.onnx
-# Place in: app/src/main/assets/punct-ct-transformer-zh-en/
-```
+### Qwen3-ASR-0.6B
+- **Files**: `audio_frontend.onnx`, `audio_transformer.onnx`, `embed.onnx`, `decoder.onnx`, `lm_head.onnx`.
+- **Vocab**: `tokens.txt` (converted from `vocab.json`).
+- **Location**: `app/src/main/assets/qwen3-asr/`
 
 ## Progress
 
-### ✅ Phase 1: Basic Recognition
-- Project setup, AAR integration, Zipformer streaming, Microphone capture, Compose UI.
-- Verified on real devices.
+### ✅ Phase 1: High-Precision LLM-ASR
+- Qwen3-ASR-0.6B integration on Android.
+- INT8 Model cascade implementation.
+- KV Cache manual management in Kotlin.
+- Mel feature extraction parity.
+- **Status**: Android implementation completed.
 
-### ✅ Phase 2: UX Optimization
-- Text post-processing (Casing/Spacing).
-- Real-time RTF display.
-- Punctuation recovery (CT-Transformer).
-
-### ⬜ Todo / Roadmap
-- [ ] Hotword boosting (modified_beam_search).
-- [ ] Partial text punctuation (throttled).
-- [ ] Automated benchmark scripts.
+### ⬜ Phase 2: Agentic Loops
+- [ ] Integration with on-device LLM for Intent Recognition.
+- [ ] Function Calling implementation.
+- [ ] End-to-end Voice Assistant loop.

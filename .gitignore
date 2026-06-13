@@ -9,9 +9,10 @@ local.properties
 .idea/
 *.iml
 
-# 大文件：模型与 AAR 不入库（获取方式见 AGENT.md）
+# 大文件：模型与 AAR 不入库
 models/
 app/libs/*.aar
+app/src/main/assets/qwen3-asr/
 app/src/main/assets/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/
 app/src/main/assets/punct-ct-transformer-zh-en/
 

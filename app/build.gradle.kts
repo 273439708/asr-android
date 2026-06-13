@@ -48,14 +48,11 @@ android {
 }
 
 dependencies {
+    implementation(libs.onnxruntime.android)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
-
-    // sherpa-onnx 官方预编译 AAR（含 libsherpa-onnx-jni.so 与 Kotlin API）
-    // 来源: https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-1.13.2.aar
-    implementation(files("libs/sherpa-onnx-1.13.2.aar"))
 }
