@@ -19,8 +19,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // sherpa-onnx 通过 JitPack 分发预编译 AAR
-        maven { url = uri("https://jitpack.io") }
     }
 }
 
