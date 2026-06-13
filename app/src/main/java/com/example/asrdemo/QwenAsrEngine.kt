@@ -31,8 +31,12 @@ class QwenAsrEngine(private val context: Context) {
     
     init {
         val opts = OrtSession.SessionOptions()
-        opts.setIntraOpNumThreads(2)
-        
+        // 解码占 ~90% 耗时，受 decoder 矩阵乘的 intra-op 并行度影响最大。
+        // 线程数取在线核数(上限 4)：SD888 等 1+3+4 架构上≈大核数，避免调度到小核反而拖慢。
+        // 注：最优值需真机实测，可按设备微调此上限。
+        val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+        opts.setIntraOpNumThreads(threads)
+
         // 为避免 JVM Heap OOM (910MB 模型)，将 Asset 拷贝到内部存储，使用文件路径加载（Mmap）
         val modelDir = File(context.filesDir, "qwen3-asr")
         if (!modelDir.exists()) modelDir.mkdirs()
